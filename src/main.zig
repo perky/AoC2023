@@ -5,6 +5,7 @@ const c = raylib.c;
 const day01 = @import("day01.zig");
 const day02 = @import("day02.zig");
 const day03 = @import("day03.zig");
+const day04 = @import("day04.zig");
 
 pub fn main() !void {
     c.SetConfigFlags(c.FLAG_MSAA_4X_HINT);
@@ -24,6 +25,9 @@ pub fn main() !void {
 
     var day03_solution = try day03.process(allocator);
     try days.append(IDay.init(&day03_solution));
+
+    var day04_solution = try day04.process(allocator);
+    try days.append(IDay.init(&day04_solution));
 
     const end_process_time = c.GetTime();
     std.debug.print("process duration: {d:.3}s\n", .{ end_process_time - start_process_time });
