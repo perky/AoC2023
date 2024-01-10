@@ -4,11 +4,11 @@ const c = raylib.c;
 
 const day01 = @import("day01.zig");
 const day02 = @import("day02.zig");
+const day03 = @import("day03.zig");
 
 pub fn main() !void {
-    const screen_w = 1080;
-    const screen_h = 720;
-    c.InitWindow(screen_w, screen_h, "Advent of Code 2023");
+    c.SetConfigFlags(c.FLAG_MSAA_4X_HINT);
+    c.InitWindow(raylib.screen_w, raylib.screen_h, "Advent of Code 2023");
     c.SetTargetFPS(60);
 
     const allocator = std.heap.c_allocator;
@@ -22,6 +22,9 @@ pub fn main() !void {
     var day02_solution = try day02.process(allocator);
     try days.append(IDay.init(&day02_solution));
 
+    var day03_solution = try day03.process(allocator);
+    try days.append(IDay.init(&day03_solution));
+
     const end_process_time = c.GetTime();
     std.debug.print("process duration: {d:.3}s\n", .{ end_process_time - start_process_time });
     
@@ -34,7 +37,7 @@ pub fn main() !void {
         p.* = raylib.Particle{
             .id = i,
             .lifetime = raylib.randomWholeFloat(0, 100) * 0.01,
-            .pos = .{ .x = raylib.randomWholeFloat(0, screen_w), .y = raylib.randomWholeFloat(0, screen_h) },
+            .pos = .{ .x = raylib.randomWholeFloat(0, raylib.screen_w), .y = raylib.randomWholeFloat(0, raylib.screen_h) },
             .vel = .{ .x = 0, .y = 50.0 + (radius * 10.0) },
             .radius = radius
         };
@@ -42,11 +45,21 @@ pub fn main() !void {
         p.init_vel = p.vel;
     }
 
-    const background_img = c.GenImageGradientLinear(screen_w, screen_h, 1, c.BLACK, c.GetColor(0x144096));
-    const background_tex = c.LoadTextureFromImage(background_img); 
+    const background_img = c.GenImageGradientLinear(raylib.screen_w, raylib.screen_h, 1, c.BLACK, c.GetColor(0x144096));
+    const background_tex = c.LoadTextureFromImage(background_img);
 
-    while (!c.WindowShouldClose())
-    {
+    c.InitAudioDevice();
+    defer c.CloseAudioDevice();
+    var background_music = c.LoadMusicStream("assets/winter_reflections.mp3");
+    defer c.UnloadMusicStream(background_music);
+
+    while (!c.WindowShouldClose()) {
+        if (c.IsMusicReady(background_music) and !c.IsMusicStreamPlaying(background_music)) {
+            c.SetMusicVolume(background_music, 0.05);
+            c.PlayMusicStream(background_music);
+        }
+        c.UpdateMusicStream(background_music);
+
         c.BeginDrawing();
         defer c.EndDrawing();
 
@@ -63,8 +76,8 @@ pub fn main() !void {
         } else {
             const contents_w = (100 * 5);
             const contents_h = (50 * 5);
-            const buttons_x0: f32 = @floatFromInt((screen_w - contents_w)/2);
-            const buttons_y0: f32 = @floatFromInt((screen_h - contents_h)/2);
+            const buttons_x0: f32 = @floatFromInt((raylib.screen_w - contents_w)/2);
+            const buttons_y0: f32 = @floatFromInt((raylib.screen_h - contents_h)/2);
             raylib.beginOffset2D(buttons_x0, buttons_y0);
             for (0..5) |column| {
                 for ((column*5 + 1)..(column*5 + 6)) |day| {

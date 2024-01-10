@@ -3,6 +3,9 @@ pub const c = @cImport({
     @cInclude("raylib.h");
 });
 
+pub const screen_w = 1080;
+pub const screen_h = 720;
+
 const null_cam = c.Camera2D{
     .offset = c.Vector2{ .x = 0, .y = 0 },
     .target = c.Vector2{ .x = 0, .y = 0 },
