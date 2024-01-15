@@ -30,6 +30,14 @@ pub fn endOffset2D() void {
     current_cam = null_cam;
 }
 
+pub fn mousePosition() c.Vector2 {
+    const abs_mouse_pos = c.GetMousePosition();
+    return .{
+        .x = abs_mouse_pos.x - current_cam.offset.x,
+        .y = abs_mouse_pos.y - current_cam.offset.y
+    };
+}
+
 pub fn drawText(allocator: std.mem.Allocator, text: []const u8, x: c_int, y: c_int, size: c_int, color: c.Color) void {
     const c_text = allocator.dupeZ(u8, text) catch {
         c.DrawText("MEMORY ALLOC ERROR", x, y, size, color);
