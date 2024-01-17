@@ -81,6 +81,20 @@ pub fn readNumber(self: *LineParser, comptime T: type) !T {
     return try std.fmt.parseInt(T, number_slice, 10);
 }
 
+pub fn readNumberList(self: *LineParser, comptime T: type, end_char: ?u8, list: anytype) !void {
+    while (!self.isEnd()) {
+        const number = try self.readNumber(T);
+        try list.append(number);
+
+        self.skipWhitespace() catch {};
+        if (end_char) |char| {
+            if (self.peekChar() == char) {
+                break;
+            }
+        }
+    }
+}
+
 pub fn readEnum(self: *LineParser, comptime T: type, words: []const []const u8, tags: []const T) !T {
     if (words.len != tags.len) {
         return error.WordsTagsLenMismatch;

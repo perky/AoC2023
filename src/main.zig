@@ -2,11 +2,14 @@ const std = @import("std");
 const raylib = @import("raylib.zig");
 const c = raylib.c;
 
-const day01 = @import("day01.zig");
-const day02 = @import("day02.zig");
-const day03 = @import("day03.zig");
-const day04 = @import("day04.zig");
-const day05 = @import("day05.zig");
+const day_modules = struct {
+    pub const day01 = @import("day01.zig");
+    pub const day02 = @import("day02.zig");
+    pub const day03 = @import("day03.zig");
+    pub const day04 = @import("day04.zig");
+    pub const day05 = @import("day05.zig");
+    pub const day06 = @import("day06.zig");
+};
 
 pub fn main() !void {
     c.SetConfigFlags(c.FLAG_MSAA_4X_HINT);
@@ -14,24 +17,15 @@ pub fn main() !void {
     c.SetTargetFPS(60);
 
     const allocator = std.heap.c_allocator;
-    var days = try std.ArrayList(IDay).initCapacity(allocator, 3);
+    var days = try std.ArrayList(IDay).initCapacity(allocator, 25);
 
     const start_process_time = c.GetTime();
 
-    var day01_solution = try day01.process(allocator);
-    try days.append(IDay.init(&day01_solution));
-
-    var day02_solution = try day02.process(allocator);
-    try days.append(IDay.init(&day02_solution));
-
-    var day03_solution = try day03.process(allocator);
-    try days.append(IDay.init(&day03_solution));
-
-    var day04_solution = try day04.process(allocator);
-    try days.append(IDay.init(&day04_solution));
-
-    var day05_solution = try day05.process(allocator);
-    try days.append(IDay.init(&day05_solution));
+    inline for (@typeInfo(day_modules).Struct.decls) |decl| {
+        const day_module = @field(day_modules, decl.name);
+        var solution = try day_module.process(allocator);
+        try days.append(IDay.init(&solution));
+    }
 
     const end_process_time = c.GetTime();
     std.debug.print("process duration: {d:.3}s\n", .{ end_process_time - start_process_time });
@@ -60,6 +54,10 @@ pub fn main() !void {
     defer c.CloseAudioDevice();
     var background_music = c.LoadMusicStream("assets/winter_reflections.mp3");
     defer c.UnloadMusicStream(background_music);
+
+    for (days.items) |day| {
+        day.load(allocator);
+    }
 
     while (!c.WindowShouldClose()) {
         if (c.IsMusicReady(background_music) and !c.IsMusicStreamPlaying(background_music)) {
@@ -121,13 +119,22 @@ pub fn main() !void {
 
 const IDay = struct {
     ptr: *anyopaque,
+    load_fn: ?*const fn (ptr: *anyopaque, allocator: std.mem.Allocator) void,
     draw_fn: *const fn (ptr: *anyopaque, allocator: std.mem.Allocator, dt: f32) void,
 
     pub fn init(ptr: anytype) IDay {
         const T = @TypeOf(ptr);
         const ptr_info = @typeInfo(T);
 
+        const has_load_fn = @hasDecl(ptr_info.Pointer.child, "load");
+
         const gen = struct {
+            pub fn load(pointer: *anyopaque, allocator: std.mem.Allocator) void {
+                const self: T = @ptrCast(@alignCast(pointer));
+                
+                return ptr_info.Pointer.child.load(self, allocator);
+            }
+
             pub fn draw(pointer: *anyopaque, allocator: std.mem.Allocator, dt: f32) void {
                 const self: T = @ptrCast(@alignCast(pointer));
                 return ptr_info.Pointer.child.draw(self, allocator, dt);
@@ -136,8 +143,15 @@ const IDay = struct {
 
         return .{
             .ptr = ptr,
+            .load_fn = if (has_load_fn) gen.load else null,
             .draw_fn = gen.draw,
         };
+    }
+
+    pub fn load(self: IDay, allocator: std.mem.Allocator) void {
+        if (self.load_fn) |load_fn| {
+            return load_fn(self.ptr, allocator);
+        }
     }
     
     pub fn draw(self: IDay, allocator: std.mem.Allocator, dt: f32) void {
